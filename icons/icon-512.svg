@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="pwaGrad512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="docGrad512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+  </defs>
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="100" fill="url(#pwaGrad512)" />
+  
+  <!-- Outer Glow / Accent ring -->
+  <rect x="16" y="16" width="480" height="480" rx="88" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4" />
+
+  <!-- Document Sheet -->
+  <g transform="translate(100, 70)">
+    <path d="M 30 0 L 220 0 C 235 0 250 15 250 30 L 250 310 C 250 325 235 340 220 340 L 30 340 C 15 340 0 325 0 310 L 0 30 C 0 15 15 0 30 0 Z" fill="url(#docGrad512)" filter="drop-shadow(0 20px 30px rgba(0,0,0,0.4))" />
+    
+    <!-- Document Header / Title bar -->
+    <rect x="40" y="55" width="105" height="15" rx="7.5" fill="#0284c7" />
+    <rect x="40" y="95" width="170" height="12" rx="6" fill="#94a3b8" />
+    <rect x="40" y="125" width="170" height="12" rx="6" fill="#94a3b8" />
+    <rect x="40" y="155" width="120" height="12" rx="6" fill="#cbd5e1" />
+    
+    <!-- Table Grid Mini Icon -->
+    <rect x="40" y="195" width="170" height="95" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="4"/>
+    <line x1="40" y1="242" x2="210" y2="242" stroke="#cbd5e1" stroke-width="4" />
+    <line x1="110" y1="195" x2="110" y2="290" stroke="#cbd5e1" stroke-width="4" />
+  </g>
+
+  <!-- Procurement Stamp / Checkmark Badge -->
+  <circle cx="370" cy="370" r="74" fill="#10b981" stroke="#ffffff" stroke-width="10" filter="drop-shadow(0 10px 20px rgba(0,0,0,0.35))" />
+  <path d="M 338 370 L 360 392 L 406 346" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

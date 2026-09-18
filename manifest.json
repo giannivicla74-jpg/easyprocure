@@ -1,0 +1,58 @@
+{
+  "name": "EasyProcure - Estrattore Dati & RdO Ufficio Acquisti",
+  "short_name": "EasyProcure",
+  "description": "Estrattore rapido dati da PDF, Immagini e Word per trasferimento gestionale ed emissione Richieste d'Offerta (RdO) a fornitori.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "it",
+  "dir": "ltr",
+  "categories": [
+    "business",
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Estrai Documento",
+      "short_name": "Estrai",
+      "description": "Carica ed estrai dati da un nuovo documento",
+      "url": "./index.html#tab-extract",
+      "icons": [
+        {
+          "src": "./icons/icon-192.svg",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Nuova RdO Fornitori",
+      "short_name": "Crea RdO",
+      "description": "Genera una Richiesta di Offerta per fornitori",
+      "url": "./index.html#tab-rdo",
+      "icons": [
+        {
+          "src": "./icons/icon-192.svg",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="description" content="Estrattore dati da PDF, Word e Immagini per trasferimento rapido su gestionale aziendale ed emissione automatica di Richieste d'Offerta (RdO) per l'Ufficio Acquisti.">
+  <meta name="author" content="DocuProcure Procurement Solutions">
+  
+  <!-- Configurazione PWA & Colori di Sistema -->
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EasyProcure">
+
+  <!-- Link al Web App Manifest & Icone -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="./icons/icon-192.svg">
+
+  <title>EasyProcure - Estrattore Dati & RdO Ufficio Acquisti</title>
+
+  <!-- Librerie ad alte prestazioni (100% Offline-First) per PDF e Scansioni -->
+  <script src="./lib/pdf.min.js"></script>
+  <script src="./lib/tesseract.min.js"></script>
+
+  <!-- Foglio di Stile Responsive Vanilla CSS3 -->
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- 1. HEADER APPLICATIVO -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-wrapper">
+        <img src="./icons/icon-192.svg" alt="EasyProcure Icon" class="brand-icon">
+        <div>
+          <h1 class="brand-title">
+            EasyProcure
+            <span class="brand-badge">Ufficio Acquisti</span>
+          </h1>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Indicatore Connessione Rete (Offline-First) -->
+        <div id="connection-status" class="status-badge" title="Stato di connettività di rete">
+          <span class="status-dot"></span>
+          <span id="connection-label">Online</span>
+        </div>
+
+        <!-- Bottone Installazione PWA (Mostrato solo quando l'app è installabile) -->
+        <button id="btn-install" class="btn btn-primary btn-sm" style="display: none;" title="Installa l'app sul dispositivo">
+          ⬇️ Installa App
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. NAVIGAZIONE TABS SEMANTICA (Mobile-First) -->
+  <nav class="nav-tabs-wrapper" aria-label="Navigazione Sezioni">
+    <div class="nav-tabs" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true" data-tab="tab-extract">
+        📥 <span>1. Acquisizione Documenti</span>
+        <span id="doc-count-badge" class="tab-counter">0</span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="tab-items">
+        📊 <span>2. Articoli & Bridge Gestionale</span>
+        <span id="items-count-badge" class="tab-counter">0</span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="tab-rdo">
+        📝 <span>3. Generatore RdO Fornitori</span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="tab-directory">
+        👥 <span>4. Rubrica & Storico</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- 3. CONTENUTO PRINCIPALE DELL'APPLICAZIONE -->
+  <main class="app-main">
+
+    <!-- Banner Notifica Installazione PWA (Personalizzabile) -->
+    <aside id="pwa-install-banner" class="pwa-install-banner" style="display: none;">
+      <div>
+        <p><strong>Installa EasyProcure sul tuo computer o smartphone!</strong></p>
+        <p style="font-size: 0.8rem; opacity: 0.9;">Accedi all'estrattore con un click dal desktop o home screen, con pieno supporto anche offline.</p>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button id="btn-banner-install" class="btn btn-outline btn-sm" style="background: #ffffff; color: #0f172a;">Installa Ora</button>
+        <button id="btn-dismiss-banner" class="btn btn-sm" style="background: transparent; border: 1px solid rgba(255,255,255,0.4); color: #fff;">Più tardi</button>
+      </div>
+    </aside>
+
+    <!-- =====================================================================
+         PANNELLO 1: ACQUISIZIONE DOCUMENTI (PDF, WORD, IMMAGINI, CSV)
+         ===================================================================== -->
+    <section id="tab-extract" class="tab-panel active" role="tabpanel">
+      <div class="dropzone-container">
+        <!-- Area Drag and Drop -->
+        <div id="dropzone" class="dropzone-card" tabindex="0" role="button" aria-label="Trascina o seleziona documenti da scansionare">
+          <input type="file" id="file-input" multiple accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp,.csv,.tsv,.txt" style="display: none;">
+          <div class="dropzone-icon">📁</div>
+          <h2 class="dropzone-title">Trascina qui i documenti o clicca per sfogliare</h2>
+          <p class="dropzone-desc">Supporta preventivi, ordini, DDT, listini o schede tecniche</p>
+          <div class="format-badges">
+            <span class="badge-format">PDF (.pdf)</span>
+            <span class="badge-format">Word (.docx)</span>
+            <span class="badge-format">Immagini (.jpg, .png)</span>
+            <span class="badge-format">Tabellari (.csv, .tsv)</span>
+          </div>
+        </div>
+
+        <!-- Box Istruzioni di Lavoro Ufficio Acquisti -->
+        <article class="instructions-card">
+          <h3>📋 Flusso di Lavoro Procurement</h3>
+          <ul class="step-list">
+            <li class="step-item">
+              <span class="step-number">1</span>
+              <div>
+                <strong>Caricamento Documenti:</strong>
+                <p class="text-muted">Carica offerte fornitori o specifiche interne in qualsiasi formato comune.</p>
+              </div>
+            </li>
+            <li class="step-item">
+              <span class="step-number">2</span>
+              <div>
+                <strong>Parsing & Revisione Dati:</strong>
+                <p class="text-muted">Il motore estrae automaticamente codici, descrizioni, quantità e prezzi unitari in una tabella verificabile.</p>
+              </div>
+            </li>
+            <li class="step-item">
+              <span class="step-number">3</span>
+              <div>
+                <strong>Copia su Gestionale ERP:</strong>
+                <p class="text-muted">Con 1 click puoi incollare i dati direttamente in SAP, Zucchetti, TeamSystem o Excel.</p>
+              </div>
+            </li>
+            <li class="step-item">
+              <span class="step-number">4</span>
+              <div>
+                <strong>Generazione Richiesta di Offerta (RdO):</strong>
+                <p class="text-muted">Componi la richiesta formale per altri fornitori concorrenti e inviala via email o stampa PDF.</p>
+              </div>
+            </li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         PANNELLO 2: TABELLA ARTICOLI ESTRATTI & COPIA GESTIONALE ERP
+         ===================================================================== -->
+    <section id="tab-items" class="tab-panel" role="tabpanel">
+      <!-- Toolbar delle Azioni Rapide Gestionale -->
+      <div class="toolbar-card">
+        <div class="erp-actions-group">
+          <button id="btn-copy-tsv" class="btn btn-success" title="Copia in formato Tab-Separated, ideale per incollare in Excel, SAP, Zucchetti">
+            📋 Copia per Excel / SAP (TSV)
+          </button>
+          <button id="btn-copy-csv" class="btn btn-outline" title="Copia in formato CSV con punto e virgola standard italiano">
+            📄 Copia CSV (;)
+          </button>
+          <button id="btn-copy-json" class="btn btn-outline" title="Copia in formato JSON per API / Integrazioni">
+            ⚙️ Copia JSON
+          </button>
+          <button id="btn-toggle-view" class="btn btn-outline" title="Alterna tra vista adattiva completa (mostra tutto il testo) e compatta">
+            ↔️ Adatta al Testo
+          </button>
+        </div>
+
+        <div class="erp-actions-group">
+          <button id="btn-add-item" class="btn btn-outline btn-sm" title="Aggiungi riga fornitura manualmente">
+            ➕ Aggiungi Riga
+          </button>
+          <button id="btn-clear-items" class="btn btn-danger-outline btn-sm" title="Svuota l'elenco attuale degli articoli">
+            🗑️ Svuota Tabella
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra Dedicata Integrazione Ad Hoc Revolution (Zucchetti) -->
+      <div class="adhoc-panel">
+        <div class="adhoc-header">
+          <div class="adhoc-title-group">
+            <span class="adhoc-badge">🏢 Zucchetti Ad Hoc Revolution</span>
+            <span class="adhoc-subtitle">Compilazione automatica per Ordini Fornitori (OdA) e RdO</span>
+          </div>
+          <button id="btn-adhoc-guide-toggle" class="btn btn-outline btn-sm" type="button">
+            💡 Come funziona in Ad Hoc?
+          </button>
+        </div>
+
+        <div class="adhoc-actions-row">
+          <div class="adhoc-buttons">
+            <button id="btn-copy-adhoc" class="btn btn-primary" title="Copia le righe pronte per essere incollate con Ctrl+V nella griglia di Ad Hoc Revolution">
+              📋 Copia per Griglia Ad Hoc (Ctrl+V)
+            </button>
+            <button id="btn-export-adhoc-csv" class="btn btn-outline" title="Scarica file CSV compatibile con il modulo Importazione Documenti di Ad Hoc Revolution">
+              💾 Scarica File per Ad Hoc (.csv)
+            </button>
+          </div>
+
+          <div class="adhoc-settings">
+            <label for="adhoc-code-mode" style="font-size: 0.8rem; font-weight: 600;">Gestione Articoli:</label>
+            <select id="adhoc-code-mode" class="adhoc-select">
+              <option value="generic" selected>Codice Generico (Evita blocco anagrafica)</option>
+              <option value="real">Codici Originali Estratti</option>
+              <option value="descriptive">Solo Descrizioni (Righe Libere)</option>
+            </select>
+            <input type="text" id="adhoc-generic-code-input" class="adhoc-input" value="VARIO" placeholder="Cod. es. VARIO" title="Codice articolo generico già presente nella tua anagrafica Ad Hoc">
+          </div>
+        </div>
+
+        <!-- Guida Rapida a Scomparsa per l'Utente -->
+        <div id="adhoc-guide-box" class="adhoc-guide-box" style="display: none;">
+          <h4>🚀 Come inserire gli Articoli in Ad Hoc Revolution senza Scrivere a Mano:</h4>
+          <div class="adhoc-guide-steps">
+            <div class="adhoc-step">
+              <strong>Metodo 1: Incolla Diretto in Griglia (Il più veloce, 3 secondi)</strong>
+              <p>1. Clicca qui sopra su <strong>"Copia per Griglia Ad Hoc (Ctrl+V)"</strong>.</p>
+              <p>2. In Ad Hoc Revolution apri il documento (OdA o RdO) e posizionati nella scheda <strong>Righe Documento</strong>.</p>
+              <p>3. Clicca sulla prima cella vuota della tabella e premi <kbd>Ctrl+V</kbd>. Tutte le righe, unità di misura, quantità e prezzi unitari si popolano in automatico!</p>
+            </div>
+            <div class="adhoc-step">
+              <strong>Metodo 2: Importazione da File Esterno (.CSV)</strong>
+              <p>1. Clicca su <strong>"Scarica File per Ad Hoc (.csv)"</strong>.</p>
+              <p>2. In Ad Hoc Revolution apri il menù <strong>Acquisti &rarr; Servizi / Utilità &rarr; Importazione Documenti</strong>.</p>
+              <p>3. Seleziona il file scaricato: Ad Hoc genererà l'OdA o la RdO importando tutte le 50+ righe con quadratura totale al centesimo.</p>
+            </div>
+            <div class="adhoc-step">
+              <strong>💡 Il Segreto per non bloccare Ad Hoc sugli "Articoli Non Censiti":</strong>
+              <p>Molti articoli dei preventivi (es. carpenteria, minuteria, cavi) non esistono nella tua anagrafica Ad Hoc. Lasciando selezionato <strong>"Codice Generico"</strong> (es. <code>VARIO</code> o <code>FERRO</code>), Ad Hoc accetta la riga con la sua descrizione tecnica originale e il prezzo esatto, senza pretendere la preventiva creazione anagrafica!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabella Interattiva Editabile -->
+      <div class="table-responsive-wrapper">
+        <div id="table-wrapper">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">#</th>
+                <th id="th-code" style="min-width: 190px; width: 210px;">Codice Art.</th>
+                <th id="th-desc" style="min-width: 380px;">Descrizione Tecnica / Fornitura</th>
+                <th id="th-qty" style="min-width: 95px; width: 105px; text-align: right;">Q.tà</th>
+                <th class="col-um" style="min-width: 85px; width: 95px; text-align: center;">U.M.</th>
+                <th style="min-width: 115px; width: 125px; text-align: right;">Prezzo Unit.</th>
+                <th style="min-width: 110px; width: 120px; text-align: right;">Totale (€)</th>
+                <th style="min-width: 160px;">Note / Specifiche</th>
+                <th style="width: 50px; text-align: center;">Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="items-tbody">
+              <!-- Righe generate dinamicamente da app.js -->
+            </tbody>
+          </table>
+
+          <!-- Riepilogo Totali -->
+          <div class="table-summary-bar">
+            <div class="summary-stat-item">
+              <span>Quantità Totale Pezzi:</span> <strong id="total-qty-display">0</strong>
+            </div>
+            <div class="summary-stat-item">
+              <span>Valore Stimato Fornitura:</span> <strong id="total-amount-display" class="font-mono">€ 0,00</strong>
+            </div>
+            <div class="summary-stat-item">
+              <label for="vat-rate-select" style="font-size: 0.85rem; color: var(--text-muted);">IVA:</label>
+              <select id="vat-rate-select" class="form-control" style="padding: 0.2rem 0.45rem; font-size: 0.85rem; width: auto; border-radius: var(--radius-sm);" title="Modifica aliquota IVA">
+                <option value="22" selected>22%</option>
+                <option value="10">10%</option>
+                <option value="5">5%</option>
+                <option value="4">4%</option>
+                <option value="0">0%</option>
+              </select>
+            </div>
+            <div class="summary-stat-item">
+              <span>Totale IVA:</span> <strong id="total-vat-display" class="font-mono" style="color: var(--accent-warning);">€ 0,00</strong>
+            </div>
+            <div class="summary-stat-item summary-stat-highlight">
+              <span>Tot. Offerta Ivata:</span> <strong id="total-gross-display" class="font-mono" style="font-size: 1.1rem; color: var(--brand-primary);">€ 0,00</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messaggio Tabella Vuota -->
+        <div id="items-empty" style="text-align: center; padding: 3rem 1.5rem; display: none;">
+          <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Nessun articolo attualmente in elenco</p>
+          <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">Carica un documento nella sezione "1. Acquisizione Documenti" o aggiungi una riga manualmente.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         PANNELLO 3: GENERATORE RICHIESTE DI OFFERTA (RdO) FORNITORI
+         ===================================================================== -->
+    <section id="tab-rdo" class="tab-panel" role="tabpanel">
+      <div class="rdo-grid">
+        <!-- Pannello Configurazione RdO -->
+        <div class="rdo-config-panel">
+          <h3>⚙️ Parametri Richiesta d'Offerta</h3>
+          
+          <div class="form-group">
+            <label class="form-label" for="rdo-supplier-select">Destinatario (Fornitore)</label>
+            <select id="rdo-supplier-select" class="form-control">
+              <option value="">-- Seleziona Fornitore da Rubrica --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="rdo-deadline">Termine Riscontro Offerta</label>
+            <input type="date" id="rdo-deadline" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="rdo-delivery">Data Consegna Richiesta</label>
+            <input type="date" id="rdo-delivery" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="rdo-incoterms">Resa Merci (Incoterms)</label>
+            <input type="text" id="rdo-incoterms" class="form-control" value="DDP (Reso Sdoganato Nostro Stabilimento)">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="rdo-payment">Condizioni di Pagamento Richieste</label>
+            <input type="text" id="rdo-payment" class="form-control" value="Rimessa Diretta 30/60 gg d.f. f.m.">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="rdo-notes">Note Speciali per il Fornitore</label>
+            <textarea id="rdo-notes" class="form-control" rows="3" placeholder="Es. Richiesta scheda tecnica di sicurezza allegata, tolleranze dimensionali ±0.05mm..."></textarea>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem;">
+            <button id="btn-rdo-email" class="btn btn-primary">
+              ✉️ Invia Email al Fornitore (mailto)
+            </button>
+            <button id="btn-rdo-print" class="btn btn-outline">
+              🖨️ Stampa / Salva in PDF
+            </button>
+            <button id="btn-rdo-save" class="btn btn-outline btn-sm">
+              💾 Salva RdO nello Storico
+            </button>
+          </div>
+        </div>
+
+        <!-- Anteprima Documentale Formale RdO (Pronta per Stampa o Invio) -->
+        <div class="rdo-preview-panel">
+          <div class="rdo-preview-header">
+            <h3 style="font-size: 1.05rem;">📄 Anteprima Ufficiale Documento</h3>
+            <span class="badge-format" style="background: var(--brand-surface); color: var(--brand-primary);">Modello Standard Acquisti</span>
+          </div>
+
+          <div class="rdo-preview-content">
+            <div id="rdo-preview-box">
+              <!-- Renderizzato dinamicamente da rdo.js / app.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         PANNELLO 4: RUBRICA FORNITORI & STORICO RdO
+         ===================================================================== -->
+    <section id="tab-directory" class="tab-panel" role="tabpanel">
+      <div class="directory-grid">
+        <!-- Rubrica Fornitori -->
+        <div class="directory-section">
+          <h3>👥 Anagrafica Fornitori</h3>
+          <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">I fornitori salvati sono memorizzati offline nel tuo browser e pronti per l'emissione RdO.</p>
+
+          <form id="form-add-supplier" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; background: var(--bg-surface-elevated); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <div class="form-group">
+              <label class="form-label" for="sup-name">Ragione Sociale *</label>
+              <input type="text" id="sup-name" class="form-control" required placeholder="Es. Orobica Utensili S.r.l.">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sup-email">Email Ufficio Commerciale / Preventivi *</label>
+              <input type="email" id="sup-email" class="form-control" required placeholder="preventivi@fornitore.it">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label" for="sup-contact">Referente (C.A.)</label>
+                <input type="text" id="sup-contact" class="form-control" placeholder="Es. Dott. Rossi">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="sup-category">Categoria Merceologica</label>
+                <input type="text" id="sup-category" class="form-control" placeholder="Es. Minuteria / Elettrico">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="align-self: flex-start; margin-top: 0.25rem;">
+              ➕ Salva Fornitore
+            </button>
+          </form>
+
+          <div id="suppliers-list" class="card-list">
+            <!-- Fornitori caricati da IndexedDB -->
+          </div>
+        </div>
+
+        <!-- Storico Richieste di Offerta Emesse -->
+        <div class="directory-section">
+          <h3>📑 Storico Richieste d'Offerta (RdO)</h3>
+          <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">Registro delle RdO generate per tracciare le richieste inviate ai fornitori.</p>
+
+          <div id="rfq-history-list" class="card-list">
+            <!-- RdO caricate da IndexedDB -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 4. CONTENITORE NOTIFICHE TOAST NON BLOCCANTI -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- 5. ENTRY POINT JAVASCRIPT (ES6 Modules) -->
+  <script type="module" src="./app.js"></script>
+
+  <!-- Fallback per browser senza supporto JavaScript -->
+  <noscript>
+    <div style="text-align: center; padding: 2rem; background: #fee2e2; color: #b91c1c; font-family: sans-serif;">
+      <strong>Attenzione:</strong> DocuProcure richiede JavaScript abilitato per elaborare documenti e operare in modalità offline.
+    </div>
+  </noscript>
+
+</body>
+</html>
